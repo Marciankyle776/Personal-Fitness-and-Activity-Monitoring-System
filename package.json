@@ -1,0 +1,17 @@
+{
+  "name": "personal-fitness-monitoring-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "seed": "npm --prefix server run seed",
+    "check:constants": "node scripts/check-constants.mjs",
+    "docs:routes": "node scripts/generate-route-docs.mjs",
+    "docs:check": "node scripts/generate-route-docs.mjs --check",
+    "docs:diagrams": "sh scripts/render-diagrams.sh",
+    "check": "npm run check:constants && npm run check:contrast && npm run docs:check",
+    "check:contrast": "node scripts/check-contrast.mjs"
+  }
+}
