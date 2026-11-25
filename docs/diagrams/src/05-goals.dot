@@ -1,0 +1,64 @@
+// 05  Goal management: create, update progress, complete, delete
+// Notation: green rounded = start/end | white = screen or user step | blue = API/server step
+//           amber diamond = decision | purple cylinder = database | red dashed = error or recovery
+//           grey parallelogram = user input.   Render with: sh scripts/render-diagrams.sh
+digraph G {
+  graph [rankdir=TB, fontname="Helvetica,Arial,sans-serif", fontsize=18, labelloc=t, pad=0.3, nodesep=0.45, ranksep=0.5, splines=polyline];
+  node  [fontname="Helvetica,Arial,sans-serif", fontsize=11, color="#1f2937", penwidth=1.2, margin="0.16,0.08"];
+  edge  [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#374151", arrowsize=0.8];
+
+  label="05  Goal management: create, update progress, complete, delete";
+  start [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Open Goals"];
+  ld [shape=box, style="filled", fillcolor="#e0f2fe", label="GET /api/goals (status filter, page)"];
+  show [shape=box, style="filled", fillcolor="#ffffff", label="Goal cards with progress bars;\nActive goals past their target date\nshow an Overdue label"];
+  act [shape=diamond, style="filled", fillcolor="#fef3c7", label="User action?"];
+  form [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Enter title, category, target and unit,\nprogress, start and target dates,\nstatus (Active or Paused)"];
+  cv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Client validation OK?\n(target >= 1, progress >= 0,\ntarget date not before start date)"];
+  ce [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Inline errors"];
+  pg [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Update progress dialog:\ntype a value or use +1 / +5 / +10 / -1"];
+  pv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Value valid?\n(number, not negative)"];
+  pe [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Inline error"];
+  sub [shape=box, style="filled", fillcolor="#e0f2fe", label="POST (new) or PUT /api/goals\n(progress update sends the whole goal)"];
+  sv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Server validation OK?"];
+  se [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Field errors or message shown,\ndialog stays open"];
+  own [shape=diamond, style="filled", fillcolor="#fef3c7", label="Edit: goal belongs to\nthe user?"];
+  nf [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="404: nothing changes"];
+  hook [shape=diamond, style="filled", fillcolor="#fef3c7", label="Progress reached\nthe target?"];
+  comp [shape=cylinder, style="filled", fillcolor="#ede9fe", label="goals: status = completed,\ncompletedAt set"];
+  reop [shape=cylinder, style="filled", fillcolor="#ede9fe", label="goals: saved as Active\n(a completed goal whose progress\nwas lowered is reopened)"];
+  nt [shape=box, style="filled", fillcolor="#e0f2fe", label="Notification: 'Goal completed'\nor 'Goal updated' or 'Goal created'"];
+  done [shape=box, style="filled", fillcolor="#ffffff", label="Toast (congratulation when completed),\ncards, notification badge reload;\ndashboard and analytics show the new\ncounts when next opened or refocused"];
+  cf [shape=diamond, style="filled", fillcolor="#fef3c7", label="Confirm delete?"];
+  del [shape=cylinder, style="filled", fillcolor="#ede9fe", label="goals: delete"];
+  start -> ld;
+  ld -> show;
+  show -> act;
+  act -> form [label="New or edit"];
+  form -> cv;
+  cv -> ce [label="No"];
+  ce -> form;
+  cv -> sub [label="Yes"];
+  act -> pg [label="Update progress"];
+  pg -> pv;
+  pv -> pe [label="No"];
+  pe -> pg;
+  pv -> sub [label="Yes"];
+  sub -> sv;
+  sv -> se [label="No"];
+  se -> act;
+  sv -> hook [label="Yes (new)"];
+  sv -> own [label="Yes (edit)"];
+  own -> nf [label="No"];
+  nf -> act;
+  own -> hook [label="Yes"];
+  hook -> comp [label="Yes"];
+  hook -> reop [label="No"];
+  comp -> nt;
+  reop -> nt;
+  nt -> done;
+  done -> ld [label="Reload"];
+  act -> cf [label="Delete"];
+  cf -> act [label="No"];
+  cf -> del [label="Yes"];
+  del -> done;
+}

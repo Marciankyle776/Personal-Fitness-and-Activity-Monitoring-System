@@ -1,0 +1,47 @@
+// 06  Dashboard and analytics: loading, refreshing and failure
+// Notation: green rounded = start/end | white = screen or user step | blue = API/server step
+//           amber diamond = decision | purple cylinder = database | red dashed = error or recovery
+//           grey parallelogram = user input.   Render with: sh scripts/render-diagrams.sh
+digraph G {
+  graph [rankdir=TB, fontname="Helvetica,Arial,sans-serif", fontsize=18, labelloc=t, pad=0.3, nodesep=0.45, ranksep=0.5, splines=polyline];
+  node  [fontname="Helvetica,Arial,sans-serif", fontsize=11, color="#1f2937", penwidth=1.2, margin="0.16,0.08"];
+  edge  [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#374151", arrowsize=0.8];
+
+  label="06  Dashboard and analytics: loading, refreshing and failure";
+  start [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Open Dashboard or Analytics"];
+  rng [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Analytics only: choose 7, 30 or 90 days,\nor a custom range (kept in the URL)"];
+  rv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Range valid?\n(start before end, up to 366 days)"];
+  re [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Message explains the limit;\nno request is sent\n(dates auto-adjust if start passes end)"];
+  req [shape=box, style="filled", fillcolor="#e0f2fe", label="GET /api/analytics/dashboard  or  /overview\nwith today = the user's local date"];
+  agg [shape=cylinder, style="filled", fillcolor="#ede9fe", label="Aggregate the user's activities, workouts,\ngoals and notifications\n(this period and, for analytics,\nthe previous period)"];
+  ok [shape=diamond, style="filled", fillcolor="#fef3c7", label="Request OK?"];
+  hd [shape=diamond, style="filled", fillcolor="#fef3c7", label="Older data\non screen?"];
+  stale [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Warning banner: showing the last data\nthat loaded, with a Retry button"];
+  full [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Error state with Try again"];
+  draw [shape=box, style="filled", fillcolor="#ffffff", label="Statistic cards, charts (with text\nsummaries), goals, reminders, recent items;\nempty-state prompt if no records yet"];
+  trg [shape=diamond, style="filled", fillcolor="#fef3c7", label="Refresh trigger?"];
+  t1 [shape=box, style="filled", fillcolor="#ffffff", label="Page opened again after\nchanging records elsewhere"];
+  t2 [shape=box, style="filled", fillcolor="#ffffff", label="Tab becomes visible again\nafter 30 seconds or more"];
+  t3 [shape=box, style="filled", fillcolor="#ffffff", label="User presses Retry or changes\nthe date range"];
+  start -> rng [label="Analytics"];
+  start -> req [label="Dashboard"];
+  rng -> rv;
+  rv -> re [label="No"];
+  re -> rng;
+  rv -> req [label="Yes"];
+  req -> agg;
+  agg -> ok;
+  ok -> draw [label="Yes"];
+  ok -> hd [label="No"];
+  hd -> stale [label="Yes"];
+  hd -> full [label="No"];
+  stale -> trg;
+  full -> trg;
+  draw -> trg;
+  trg -> t1;
+  trg -> t2;
+  trg -> t3;
+  t1 -> req;
+  t2 -> req;
+  t3 -> req;
+}

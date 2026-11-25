@@ -1,0 +1,41 @@
+// 08  Sign-out and session end
+// Notation: green rounded = start/end | white = screen or user step | blue = API/server step
+//           amber diamond = decision | purple cylinder = database | red dashed = error or recovery
+//           grey parallelogram = user input.   Render with: sh scripts/render-diagrams.sh
+digraph G {
+  graph [rankdir=TB, fontname="Helvetica,Arial,sans-serif", fontsize=18, labelloc=t, pad=0.3, nodesep=0.45, ranksep=0.5, splines=polyline];
+  node  [fontname="Helvetica,Arial,sans-serif", fontsize=11, color="#1f2937", penwidth=1.2, margin="0.16,0.08"];
+  edge  [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#374151", arrowsize=0.8];
+
+  label="08  Sign-out and session end";
+  start [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Signed-in user"];
+  lo [shape=diamond, style="filled", fillcolor="#fef3c7", label="How does the\nsession end?"];
+  click [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Logout from sidebar,\naccount menu or Profile"];
+  post [shape=box, style="filled", fillcolor="#e0f2fe", label="POST /api/auth/logout\nclears the HTTP-only cookie"];
+  net [shape=diamond, style="filled", fillcolor="#fef3c7", label="Request succeeded?"];
+  loc [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Cookie is cleared by the server on success;\non failure the app still clears its own state"];
+  exp [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Cookie expired, or the account\nno longer exists"];
+  pw [shape=box, style="filled", fillcolor="#e0f2fe", label="Password changed on another device\n(server rejects older tokens)"];
+  r401 [shape=box, style="filled", fillcolor="#e0f2fe", label="Next protected request returns 401"];
+  ev [shape=box, style="filled", fillcolor="#e0f2fe", label="App fires auth:unauthorized"];
+  clr [shape=box, style="filled", fillcolor="#ffffff", label="Clear user state, notifications and badge;\nshow 'session ended' toast"];
+  tst [shape=box, style="filled", fillcolor="#ffffff", label="Toast: 'You have been signed out'"];
+  login [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Sign in page\n(diagram 01)"];
+  same [shape=box, style="filled", fillcolor="#e0f2fe", label="Device that changed the password\nis issued a fresh cookie and stays signed in"];
+  start -> lo;
+  lo -> click [label="User chooses Logout"];
+  lo -> exp [label="Time runs out"];
+  lo -> pw [label="Password changed elsewhere"];
+  click -> post;
+  post -> net;
+  net -> tst [label="Yes"];
+  net -> loc [label="No"];
+  loc -> tst;
+  tst -> login;
+  exp -> r401;
+  pw -> r401;
+  r401 -> ev;
+  ev -> clr;
+  clr -> login;
+  pw -> same [label="This device"];
+}

@@ -1,0 +1,45 @@
+// 07  Notifications: creation, badge, reading
+// Notation: green rounded = start/end | white = screen or user step | blue = API/server step
+//           amber diamond = decision | purple cylinder = database | red dashed = error or recovery
+//           grey parallelogram = user input.   Render with: sh scripts/render-diagrams.sh
+digraph G {
+  graph [rankdir=TB, fontname="Helvetica,Arial,sans-serif", fontsize=18, labelloc=t, pad=0.3, nodesep=0.45, ranksep=0.5, splines=polyline];
+  node  [fontname="Helvetica,Arial,sans-serif", fontsize=11, color="#1f2937", penwidth=1.2, margin="0.16,0.08"];
+  edge  [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#374151", arrowsize=0.8];
+
+  label="07  Notifications: creation, badge, reading";
+  start [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Something happens in the app"];
+  ev [shape=box, style="filled", fillcolor="#e0f2fe", label="Activity or workout recorded, routine logged,\ngoal created / updated / completed,\nprofile saved, password changed, account created"];
+  sec [shape=diamond, style="filled", fillcolor="#fef3c7", label="Security or welcome\nmessage?"];
+  pref [shape=diamond, style="filled", fillcolor="#fef3c7", label="Notifications turned on\nin Settings?"];
+  skip [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="No notification is created\n(the action itself still succeeds)"];
+  mk [shape=cylinder, style="filled", fillcolor="#ede9fe", label="notifications: create (unread)\nautomatically deleted after 90 days"];
+  fail [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="If creating fails, the error is logged\nand the main action is not affected"];
+  poll [shape=box, style="filled", fillcolor="#e0f2fe", label="GET /api/notifications\nafter the user's own actions, every 60 s,\nand when the tab becomes visible"];
+  badge [shape=box, style="filled", fillcolor="#ffffff", label="Bell badge shows unread count;\nSidebar badge matches;\nbell lists the latest 8"];
+  act [shape=diamond, style="filled", fillcolor="#fef3c7", label="User action?"];
+  one [shape=box, style="filled", fillcolor="#e0f2fe", label="PUT /api/notifications/:id/read\nthen open the related page"];
+  all [shape=box, style="filled", fillcolor="#e0f2fe", label="PUT /api/notifications/read-all"];
+  pg [shape=box, style="filled", fillcolor="#ffffff", label="Notifications page: All or Unread filter,\npagination, Mark as read"];
+  own [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Another user's notification\nreturns 404"];
+  ref [shape=box, style="filled", fillcolor="#ffffff", label="List and badge reload together\nso the two never disagree"];
+  start -> ev;
+  ev -> sec;
+  sec -> mk [label="Yes: always created"];
+  sec -> pref [label="No"];
+  pref -> skip [label="Off"];
+  pref -> mk [label="On"];
+  mk -> fail [label="Insert fails"];
+  mk -> poll [label="Insert OK"];
+  poll -> badge;
+  badge -> act;
+  act -> one [label="Click a notification"];
+  act -> all [label="Mark all as read"];
+  act -> pg [label="Open Notifications"];
+  one -> own [label="Not the owner"];
+  one -> ref;
+  all -> ref;
+  pg -> one;
+  pg -> all;
+  ref -> badge;
+}

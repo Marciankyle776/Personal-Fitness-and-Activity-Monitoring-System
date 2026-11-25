@@ -1,0 +1,62 @@
+// 04  Workout routines: create, edit, log as a workout, delete
+// Notation: green rounded = start/end | white = screen or user step | blue = API/server step
+//           amber diamond = decision | purple cylinder = database | red dashed = error or recovery
+//           grey parallelogram = user input.   Render with: sh scripts/render-diagrams.sh
+digraph G {
+  graph [rankdir=TB, fontname="Helvetica,Arial,sans-serif", fontsize=18, labelloc=t, pad=0.3, nodesep=0.45, ranksep=0.5, splines=polyline];
+  node  [fontname="Helvetica,Arial,sans-serif", fontsize=11, color="#1f2937", penwidth=1.2, margin="0.16,0.08"];
+  edge  [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#374151", arrowsize=0.8];
+
+  label="04  Workout routines: create, edit, log as a workout, delete";
+  start [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Open Workout Routines"];
+  ld [shape=box, style="filled", fillcolor="#e0f2fe", label="GET /api/routines\n(search, category, sort, page)"];
+  show [shape=box, style="filled", fillcolor="#ffffff", label="Routine cards, or an empty state\nwith a Create prompt"];
+  act [shape=diamond, style="filled", fillcolor="#fef3c7", label="User action?"];
+  form [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Enter name, category, estimated\nminutes and exercises\n(add or remove exercise rows)"];
+  cv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Client validation OK?\n(name, duration, up to 50\nexercises, each with a name)"];
+  ce [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Inline errors,\nsubmit blocked"];
+  sub [shape=box, style="filled", fillcolor="#e0f2fe", label="POST or PUT /api/routines"];
+  sv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Server validation OK?"];
+  se [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Field errors shown inline,\nform stays open"];
+  rs [shape=cylinder, style="filled", fillcolor="#ede9fe", label="routines: create or update"];
+  lg [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Log workout dialog:\ndate (today) and minutes\n(prefilled with the estimate)"];
+  lv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Client validation OK?\n(no future date)"];
+  le [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Inline errors"];
+  lp [shape=box, style="filled", fillcolor="#e0f2fe", label="POST /api/routines/:id/log"];
+  lo [shape=diamond, style="filled", fillcolor="#fef3c7", label="Routine belongs to\nthe user?"];
+  l404 [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="404: nothing is logged"];
+  lw [shape=cylinder, style="filled", fillcolor="#ede9fe", label="workouts: create session (tag 'routine')\nroutines: timesCompleted + 1,\nlastCompletedAt"];
+  ln [shape=box, style="filled", fillcolor="#e0f2fe", label="Create notification"];
+  done [shape=box, style="filled", fillcolor="#ffffff", label="Toast, cards reload, notification badge\nupdates; session appears in Workouts"];
+  cf [shape=diamond, style="filled", fillcolor="#fef3c7", label="Confirm delete?"];
+  del [shape=cylinder, style="filled", fillcolor="#ede9fe", label="routines: delete\n(workouts already logged are kept)"];
+  start -> ld;
+  ld -> show;
+  show -> act;
+  act -> form [label="New or edit"];
+  form -> cv;
+  cv -> ce [label="No"];
+  ce -> form;
+  cv -> sub [label="Yes"];
+  sub -> sv;
+  sv -> se [label="No"];
+  se -> form;
+  sv -> rs [label="Yes"];
+  rs -> done;
+  act -> lg [label="Log workout"];
+  lg -> lv;
+  lv -> le [label="No"];
+  le -> lg;
+  lv -> lp [label="Yes"];
+  lp -> lo;
+  lo -> l404 [label="No"];
+  l404 -> act;
+  lo -> lw [label="Yes"];
+  lw -> ln;
+  ln -> done;
+  act -> cf [label="Delete"];
+  cf -> act [label="No"];
+  cf -> del [label="Yes"];
+  del -> done;
+  done -> ld [label="Reload"];
+}

@@ -1,0 +1,71 @@
+// 03  Activity and workout records: list, create, edit, delete, export
+// Notation: green rounded = start/end | white = screen or user step | blue = API/server step
+//           amber diamond = decision | purple cylinder = database | red dashed = error or recovery
+//           grey parallelogram = user input.   Render with: sh scripts/render-diagrams.sh
+digraph G {
+  graph [rankdir=TB, fontname="Helvetica,Arial,sans-serif", fontsize=18, labelloc=t, pad=0.3, nodesep=0.45, ranksep=0.5, splines=polyline];
+  node  [fontname="Helvetica,Arial,sans-serif", fontsize=11, color="#1f2937", penwidth=1.2, margin="0.16,0.08"];
+  edge  [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#374151", arrowsize=0.8];
+
+  label="03  Activity and workout records: list, create, edit, delete, export";
+  start [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Open Activities or Workouts"];
+  ld [shape=box, style="filled", fillcolor="#e0f2fe", label="GET list (page, search, category,\ndates, sort) and GET stats\nQuery limited to the signed-in user"];
+  ok [shape=diamond, style="filled", fillcolor="#fef3c7", label="Request OK?"];
+  err [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Error state with Try again\n(if older data is on screen,\na warning says it may be out of date)"];
+  any [shape=diamond, style="filled", fillcolor="#fef3c7", label="Any records?"];
+  emp [shape=box, style="filled", fillcolor="#ffffff", label="Empty state:\nAdd prompt, or Clear filters\nwhen filters are active"];
+  show [shape=box, style="filled", fillcolor="#ffffff", label="Table or cards, result count,\npagination, statistics"];
+  act [shape=diamond, style="filled", fillcolor="#fef3c7", label="User action?"];
+  flt [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Change search, category,\ndates, sort or page"];
+  fa [shape=box, style="filled", fillcolor="#e0f2fe", label="Search waits 350 ms; any filter\nreturns to page 1; end date kept\non or after start date"];
+  form [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Fill the form\n(defaults: today, first category)"];
+  cv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Client validation OK?\n(required fields, 1-1440 minutes,\nno future date)"];
+  ce [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Inline errors, focus moves\nto the first invalid field"];
+  sub [shape=box, style="filled", fillcolor="#e0f2fe", label="POST (new) or PUT (edit)\nsecond submit ignored while running"];
+  sv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Server validation OK?"];
+  se [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Field errors from the API\nshown inline, form stays open"];
+  own [shape=diamond, style="filled", fillcolor="#fef3c7", label="Edit or delete: record\nbelongs to the user?"];
+  nf [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="404: nothing changes,\nerror message shown"];
+  db [shape=cylinder, style="filled", fillcolor="#ede9fe", label="activities / workouts:\ncreate, update or delete"];
+  nt [shape=box, style="filled", fillcolor="#e0f2fe", label="Create notification\n(create only, if enabled)"];
+  done [shape=box, style="filled", fillcolor="#ffffff", label="Success toast, form closes, list,\nstatistics and notification badge\nreload (previous page if page emptied)"];
+  cf [shape=diamond, style="filled", fillcolor="#fef3c7", label="Confirm delete?"];
+  del [shape=box, style="filled", fillcolor="#e0f2fe", label="DELETE record"];
+  ex [shape=box, style="filled", fillcolor="#e0f2fe", label="GET /activities/export\nwith the current filters"];
+  dl [shape=box, style="filled", fillcolor="#ffffff", label="CSV file downloads\n(or an error toast)"];
+  start -> ld;
+  ld -> ok;
+  ok -> err [label="No"];
+  err -> ld [label="Try again"];
+  ok -> any [label="Yes"];
+  any -> emp [label="No"];
+  any -> show [label="Yes"];
+  emp -> act;
+  show -> act;
+  act -> flt [label="Search or filter"];
+  flt -> fa;
+  fa -> ld;
+  act -> form [label="Add or edit"];
+  form -> cv;
+  cv -> ce [label="No"];
+  ce -> form;
+  cv -> sub [label="Yes"];
+  sub -> sv;
+  sv -> se [label="No"];
+  se -> form;
+  sv -> db [label="Yes (new)"];
+  sv -> own [label="Yes (edit)"];
+  own -> nf [label="No"];
+  nf -> act;
+  own -> db [label="Yes"];
+  db -> nt;
+  nt -> done;
+  done -> ld [label="Reload"];
+  act -> cf [label="Delete"];
+  cf -> act [label="No"];
+  cf -> del [label="Yes"];
+  del -> own;
+  act -> ex [label="Export CSV (activities)"];
+  ex -> dl;
+  dl -> act;
+}

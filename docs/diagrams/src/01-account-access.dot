@@ -1,0 +1,70 @@
+// 01  Account access: session check, sign in, register
+// Notation: green rounded = start/end | white = screen or user step | blue = API/server step
+//           amber diamond = decision | purple cylinder = database | red dashed = error or recovery
+//           grey parallelogram = user input.   Render with: sh scripts/render-diagrams.sh
+digraph G {
+  graph [rankdir=TB, fontname="Helvetica,Arial,sans-serif", fontsize=18, labelloc=t, pad=0.3, nodesep=0.45, ranksep=0.5, splines=polyline];
+  node  [fontname="Helvetica,Arial,sans-serif", fontsize=11, color="#1f2937", penwidth=1.2, margin="0.16,0.08"];
+  edge  [fontname="Helvetica,Arial,sans-serif", fontsize=10, color="#374151", arrowsize=0.8];
+
+  label="01  Account access: session check, sign in, register";
+  start [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Open FitTrack"];
+  me [shape=box, style="filled", fillcolor="#e0f2fe", label="GET /api/auth/me\n(browser sends the HTTP-only cookie)"];
+  ds [shape=diamond, style="filled", fillcolor="#fef3c7", label="Valid\nsession?"];
+  dash [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Dashboard"];
+  login [shape=box, style="filled", fillcolor="#ffffff", label="Sign in page"];
+  in1 [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Enter email and password\n(Remember me optional)"];
+  v1 [shape=diamond, style="filled", fillcolor="#fef3c7", label="Client validation OK?\n(Zod, on blur and submit)"];
+  e1 [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Inline field errors,\nsubmit blocked"];
+  p1 [shape=box, style="filled", fillcolor="#e0f2fe", label="POST /api/auth/login\n(second submit ignored while running)"];
+  rl [shape=diamond, style="filled", fillcolor="#fef3c7", label="Too many failed\nattempts? (10 / 15 min)"];
+  e429 [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="429: try again later"];
+  bc [shape=diamond, style="filled", fillcolor="#fef3c7", label="Account found and\nbcrypt password matches?"];
+  e401 [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="401: Invalid email\nor password"];
+  ck [shape=box, style="filled", fillcolor="#e0f2fe", label="Sign JWT, set HTTP-only cookie\n(sign in: 7 days with Remember me;\notherwise, and after registering,\nuntil the browser closes)"];
+  ll [shape=cylinder, style="filled", fillcolor="#ede9fe", label="users: lastLoginAt"];
+  ok [shape=box, style="filled", fillcolor="#ffffff", label="Welcome toast, then open the page\nthe user asked for, or Dashboard"];
+  in2 [shape=parallelogram, style="filled", fillcolor="#f1f5f9", label="Enter name, email, password,\nconfirmation, accept terms"];
+  v2 [shape=diamond, style="filled", fillcolor="#fef3c7", label="Client validation OK?\n(strength rules, match, terms)"];
+  e2 [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="Inline field errors,\nsubmit blocked"];
+  p2 [shape=box, style="filled", fillcolor="#e0f2fe", label="POST /api/auth/register"];
+  sv [shape=diamond, style="filled", fillcolor="#fef3c7", label="Server validation\nOK?"];
+  e400 [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="400: field errors\nshown inline"];
+  dup [shape=diamond, style="filled", fillcolor="#fef3c7", label="Email already\nregistered?"];
+  e409 [shape=box, style="filled,dashed", fillcolor="#fee2e2", label="409: error shown\non the email field"];
+  mk [shape=cylinder, style="filled", fillcolor="#ede9fe", label="users: create (bcrypt hash)\nnotifications: welcome message"];
+  fp [shape=box, style="rounded,filled", fillcolor="#d1fae5", label="Forgot password:\nsee diagram 02"];
+  start -> me;
+  me -> ds;
+  ds -> dash [label="Yes"];
+  ds -> login [label="No (401 or\nnetwork error)"];
+  login -> in1 [label="Sign in"];
+  login -> in2 [label="Create account"];
+  login -> fp [label="Forgot password"];
+  in1 -> v1;
+  v1 -> e1 [label="No"];
+  e1 -> in1;
+  v1 -> p1 [label="Yes"];
+  p1 -> rl;
+  rl -> e429 [label="Yes"];
+  e429 -> in1;
+  rl -> bc [label="No"];
+  bc -> e401 [label="No"];
+  e401 -> in1;
+  bc -> ck [label="Yes"];
+  ck -> ll;
+  ll -> ok;
+  ok -> dash;
+  in2 -> v2;
+  v2 -> e2 [label="No"];
+  e2 -> in2;
+  v2 -> p2 [label="Yes"];
+  p2 -> sv;
+  sv -> e400 [label="No"];
+  e400 -> in2;
+  sv -> dup [label="Yes"];
+  dup -> e409 [label="Yes"];
+  e409 -> in2;
+  dup -> mk [label="No"];
+  mk -> ck;
+}
